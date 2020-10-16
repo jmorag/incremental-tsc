@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as ts from 'typescript'
 import * as fs from 'fs'
 import * as yargs from 'yargs'
