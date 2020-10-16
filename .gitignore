@@ -1,3 +1,4 @@
 /.envrc
 /.log/
 /node_modules/
+/index.js
