@@ -13,13 +13,13 @@ function check(fileNames: string[], options: ts.CompilerOptions): void {
     .concat(emitResult.diagnostics)
 
   let count = 0
-  allDiagnostics.forEach(diagnostic => {
+  allDiagnostics.forEach((diagnostic: ts.Diagnostic) => {
     const fileName = diagnostic.file.fileName
     if (diagnostic.file && fileNames.includes(fileName)) {
       const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(
         diagnostic.start!
       )
-      const message = diagnostic.messageText
+      const message = getMessageText(diagnostic)
       console.log(`${fileName} (${line + 1},${character + 1}): ${message}`)
       count++
     }
@@ -27,10 +27,19 @@ function check(fileNames: string[], options: ts.CompilerOptions): void {
   process.exit(count === 0 ? 0 : 1)
 }
 
-const readConfig = (path: string): ts.CompilerOptions => {
-  const rawConfig = ts.readConfigFile(path, filename =>
-    fs.readFileSync(filename, 'utf8')
-  ).config
+function getMessageText(diagnostic: ts.Diagnostic): string {
+  function go(message: string | ts.DiagnosticMessageChain): string {
+    if (typeof message === 'string') return message
+    const next = message.next
+    return go(message.messageText) + (next ? '\n\t' + next.map(go) : '')
+  }
+
+  return go(diagnostic.messageText)
+}
+
+function readConfig(path: string): ts.CompilerOptions {
+  const readFile = (path: string) => fs.readFileSync(path, 'utf8')
+  const rawConfig = ts.readConfigFile(path, readFile).config
   return (
     ts.convertCompilerOptionsFromJson(rawConfig?.compilerOptions, '.')
       .options || {}
