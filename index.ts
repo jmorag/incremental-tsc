@@ -13,6 +13,11 @@ interface File {
 
 // taken from https://github.com/Microsoft/TypeScript/wiki/Using-the-Compiler-API
 function check(files: File[], options: ts.CompilerOptions): void {
+  if (files.length === 0) {
+    console.log("No typescript files changed")
+    process.exit(0)
+  }
+
   const fileNames = files.map(f => f.fileName)
   const program = ts.createProgram(fileNames, options)
   const emitResult = program.emit()
