@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-import * as ts from 'typescript'
+import ts from 'typescript'
 import * as fs from 'fs'
-import * as yargs from 'yargs'
+import yargs from 'yargs'
+import fetch from 'node-fetch'
+import { URL } from 'url'
+
 // This represents the + section of the @@ header of a patch
 interface File {
   fileName: string
-  lines?: { start: number; extent: number }
+  lines?: { start: number; extent: number }[]
 }
 
 // taken from https://github.com/Microsoft/TypeScript/wiki/Using-the-Compiler-API
@@ -26,8 +29,11 @@ function check(files: File[], options: ts.CompilerOptions): void {
         diagnostic.start!
       )
       const lines = files.find(f => f.fileName === fileName).lines
-      const abs = (x: number) => x >= 0 ? x : -x
-      if (lines === undefined || abs(line + 1 - lines.start) <= lines.extent) {
+      const abs = (x: number) => (x >= 0 ? x : -x)
+      if (
+        lines === undefined ||
+        lines.some(l => abs(line + 1 - l.start) <= l.extent)
+      ) {
         const message = getMessageText(diagnostic)
         console.log(`${fileName} (${line + 1},${character + 1}): ${message}`)
         exitCode = 1
@@ -56,36 +62,60 @@ function readConfig(path: string): ts.CompilerOptions {
   )
 }
 
-function parseArgs(args: string[]): File[] {
-  return args.map(arg => {
-    const colon_ix = arg.indexOf(':')
-    if (colon_ix === -1) return { fileName: arg }
-
-    const errorMessage = `malformed argument ${arg}. Should be in the form file.ts:1,10`
-    const fileName = arg.substring(0, colon_ix)
-    const comma_ix = arg.indexOf(',')
-    if (comma_ix === -1) throw errorMessage
-
-    const start = parseInt(arg.substring(colon_ix + 1, comma_ix), 10)
-    if (isNaN(start)) throw errorMessage
-
-    const extent = parseInt(arg.substring(comma_ix + 1), 10)
-    if (isNaN(extent)) throw errorMessage
-
-    return { fileName, lines: { start, extent } }
-  })
+async function parseArgs(args: string[], useLines: boolean): Promise<File[]> {
+  if (args.length === 1) {
+    try {
+      const github_pr_url = new URL(args[0])
+      return getPRFiles(github_pr_url, useLines)
+    } catch (_) {
+      return args.map(arg => ({ fileName: arg }))
+    }
+  }
 }
 
-const argv = yargs(process.argv.slice(2))
-  .demandCommand(1)
-  .default('tsconfig', './tsconfig.json')
-  .default('tsconfig-paths', './tsconfig.paths.json')
-  .usage('Usage: $0 src/components/*.tsx').argv
+async function getPRFiles(url: URL, useLines: boolean): Promise<File[]> {
+  const gh_user = process.env['GITHUB_USER']
+  const gh_password = process.env['GITHUB_PASSWORD']
+  const auth_header =
+    'Basic ' + Buffer.from(gh_user + ':' + gh_password).toString('base64')
+  const resp = await fetch(url, { headers: { Authorization: auth_header } })
+  const data = await resp.json()
 
-const options = {
-  ...readConfig(argv['tsconfig-paths']),
-  ...readConfig(argv.tsconfig),
-  noEmit: true,
+  return parsePRData(data, useLines)
 }
 
-check(parseArgs(argv._), options)
+function parsePRData(data: any, useLines: boolean) {
+  const headerRegex = /@@\s-\d+,\d+\s\+(?<start>\d+),(?<extent>\d+)\s@@/g
+  return data
+    .filter(({ filename }) => filename.match(/\.tsx?$/))
+    .map((change: { filename: string; patch: string }) => {
+      const fileName = change.filename
+      let lines = undefined
+      if (useLines) {
+        lines = []
+        for (const l of change.patch.matchAll(headerRegex)) {
+          lines.push(l.groups)
+        }
+      }
+      return { fileName, lines }
+    })
+}
+
+;(async () => {
+  const argv = yargs(process.argv.slice(2))
+    .demandCommand(1)
+    .default('tsconfig', './tsconfig.json')
+    .default('tsconfig-paths', './tsconfig.paths.json')
+    .boolean(['changed-lines-only'])
+    .usage(
+      'Usage: $0 src/components/*.tsx OR $0 https://api.github.com/repos/<username>/<repo>/pulls/<prnum>/files'
+    ).argv
+
+  const options = {
+    ...readConfig(argv['tsconfig-paths']),
+    ...readConfig(argv.tsconfig),
+    noEmit: true,
+  }
+  const args = await parseArgs(argv._, argv['changed-lines-only'])
+  check(args, options)
+})()

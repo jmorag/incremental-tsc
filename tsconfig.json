@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["es2020.string"],
+    "downlevelIteration": true,
+    "target": "es2019",
+    "allowSyntheticDefaultImports": true,
+    "module": "esnext",
+    "moduleResolution": "node"
+  }
+}
