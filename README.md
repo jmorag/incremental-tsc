@@ -12,3 +12,16 @@ As of v0.0.4, you can also pass a URL to the github API enpoint for a specific p
 ```
 incremental-tsc https://api.github.com/repos/<username>/<repo>/pulls/<prnum>/files --changed-lines-only
 ```
+## Running in CircleCI
+Assuming you have suitable `GITHUB_[USER|PASSWORD]` environment variables set, the following bash script will run check only lines changed in the pr that CI is running in.
+```bash
+if [ -z "$CIRCLE_PULL_REQUEST" ]; then
+    echo "Not in a Pull Request, skipping incremental-tsc check"
+    exit 0
+fi
+
+BASE_URL=https://github.com/<owner>/<repo>/pull/
+PR_NUM=${CIRCLE_PULL_REQUEST:${#BASE_URL}}
+URL="https://api.github.com/repos/<owner>/<repo>/pulls/${PR_NUM}/files"
+./node_modules/.bin/incremental-tsc --changed-lines-only "$URL"
+```
