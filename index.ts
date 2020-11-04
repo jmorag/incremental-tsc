@@ -1,4 +1,4 @@
-#!/usr/bin/env node --unhandled-rejections=strict
+#!/usr/bin/env -S node --unhandled-rejections=strict
 import ts from 'typescript'
 import * as fs from 'fs'
 import yargs from 'yargs'
