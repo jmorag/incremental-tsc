@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --unhandled-rejections=strict
 import ts from 'typescript'
 import * as fs from 'fs'
 import yargs from 'yargs'
@@ -93,12 +93,12 @@ function parsePRData(data: any, useLines: boolean) {
   const headerRegex = /@@\s-\d+,\d+\s\+(?<start>\d+),(?<extent>\d+)\s@@/g
   return data
     .filter(({ filename }) => filename.match(/\.tsx?$/))
-    .map((change: { filename: string; patch: string }) => {
+    .map((change: { filename: string; patch?: string }) => {
       const fileName = change.filename
       let lines = undefined
       if (useLines) {
         lines = []
-        for (const l of change.patch.matchAll(headerRegex)) {
+        for (const l of change.patch?.matchAll(headerRegex) || []) {
           lines.push(l.groups)
         }
       }
