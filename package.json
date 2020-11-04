@@ -1,6 +1,6 @@
 {
   "name": "incremental-tsc",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Typecheck new typescript files incrementally",
   "author": "Joseph Morag",
   "license": "MIT",
