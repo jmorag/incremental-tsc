@@ -33,11 +33,10 @@ function check(files: File[], options: ts.CompilerOptions): void {
       const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(
         diagnostic.start!
       )
-      const lines = files.find(f => f.fileName === fileName).lines
-      const abs = (x: number) => (x >= 0 ? x : -x)
+      const { lines } = files.find(f => f.fileName === fileName)
       if (
         lines === undefined ||
-        lines.some(l => abs(line + 1 - l.start) <= l.extent)
+        lines.some(l => (line >= l.start) && (line + 1 - l.start <= l.extent))
       ) {
         const message = getMessageText(diagnostic)
         console.log(`${fileName} (${line + 1},${character + 1}): ${message}`)
