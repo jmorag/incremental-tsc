@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --unhandled-rejections=strict
+#!/usr/bin/env node
 import ts from 'typescript'
 import * as fs from 'fs'
 import yargs from 'yargs'
@@ -14,7 +14,7 @@ interface File {
 // taken from https://github.com/Microsoft/TypeScript/wiki/Using-the-Compiler-API
 function check(files: File[], options: ts.CompilerOptions): void {
   if (files.length === 0) {
-    console.log("No typescript files changed")
+    console.log('No typescript files changed')
     process.exit(0)
   }
 
@@ -85,6 +85,9 @@ async function getPRFiles(url: URL, useLines: boolean): Promise<File[]> {
     'Basic ' + Buffer.from(gh_user + ':' + gh_password).toString('base64')
   const resp = await fetch(url, { headers: { Authorization: auth_header } })
   const data = await resp.json()
+  if (data?.message === 'Not Found') {
+    throw 'PR data not found'
+  }
 
   return parsePRData(data, useLines)
 }
@@ -123,4 +126,7 @@ function parsePRData(data: any, useLines: boolean) {
   }
   const args = await parseArgs(argv._, argv['changed-lines-only'])
   check(args, options)
-})()
+})().catch(err => {
+    console.log(err)
+    process.exit(1)
+})
