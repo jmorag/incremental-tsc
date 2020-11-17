@@ -119,7 +119,7 @@ async function main() {
     .default('tsconfig-paths', './tsconfig.paths.json')
     .boolean(['changed-lines-only'])
     .usage(
-      'Usage: $0 src/components/*.tsx OR $0 https://api.github.com/repos/<username>/<repo>/pulls/<prnum>/files'
+      'Usage: $0 src/components/*.tsx OR $0 https://api.github.com/repos/<username>/<repo>/pulls/<prnum>/files [--changed-lines-only]'
     ).argv
 
   const options = {
