@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import yargs from 'yargs'
 import fetch from 'node-fetch'
 import { URL } from 'url'
+import chalk from 'chalk'
 
 // This represents the + section of the @@ header of a patch
 interface File {
@@ -18,7 +19,7 @@ function check(files: File[], options: ts.CompilerOptions): void {
     process.exit(0)
   }
 
-  const fileNames = files.map(f => f.fileName)
+  const fileNames = files.map((f) => f.fileName)
   const program = ts.createProgram(fileNames, options)
   const emitResult = program.emit()
 
@@ -33,13 +34,16 @@ function check(files: File[], options: ts.CompilerOptions): void {
       const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(
         diagnostic.start!
       )
-      const { lines } = files.find(f => f.fileName === fileName)
+      const { lines } = files.find((f) => f.fileName === fileName)
       if (
         lines === undefined ||
-        lines.some(l => (line >= l.start) && (line + 1 - l.start <= l.extent))
+        lines.some((l) => line >= l.start && line + 1 - l.start <= l.extent)
       ) {
         const message = getMessageText(diagnostic)
-        console.log(`${fileName} (${line + 1},${character + 1}): ${message}`)
+        console.log(
+          chalk.underline.bold(`${fileName} (${line + 1},${character + 1}):`) +
+            ` ${message}`
+        )
         exitCode = 1
       }
     }
@@ -72,7 +76,7 @@ async function parseArgs(args: string[], useLines: boolean): Promise<File[]> {
       const github_pr_url = new URL(args[0])
       return getPRFiles(github_pr_url, useLines)
     } catch (_) {
-      return args.map(arg => ({ fileName: arg }))
+      return args.map((arg) => ({ fileName: arg }))
     }
   }
 }
@@ -108,7 +112,7 @@ function parsePRData(data: any, useLines: boolean) {
     })
 }
 
-;(async () => {
+async function main() {
   const argv = yargs(process.argv.slice(2))
     .demandCommand(1)
     .default('tsconfig', './tsconfig.json')
@@ -125,7 +129,9 @@ function parsePRData(data: any, useLines: boolean) {
   }
   const args = await parseArgs(argv._, argv['changed-lines-only'])
   check(args, options)
-})().catch(err => {
-    console.log(err)
-    process.exit(1)
+}
+
+main().catch((err) => {
+  console.log(err)
+  process.exit(1)
 })
