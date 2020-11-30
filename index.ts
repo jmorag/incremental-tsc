@@ -71,13 +71,11 @@ function readConfig(path: string): ts.CompilerOptions {
 }
 
 async function parseArgs(args: string[], useLines: boolean): Promise<File[]> {
-  if (args.length === 1) {
-    try {
-      const github_pr_url = new URL(args[0])
-      return getPRFiles(github_pr_url, useLines)
-    } catch (_) {
-      return args.map((arg) => ({ fileName: arg }))
-    }
+  try {
+    const github_pr_url = new URL(args[0])
+    return getPRFiles(github_pr_url, useLines)
+  } catch (_) {
+    return args.map((arg) => ({ fileName: arg }))
   }
 }
 
@@ -95,10 +93,14 @@ async function getPRFiles(url: URL, useLines: boolean): Promise<File[]> {
   return parsePRData(data, useLines)
 }
 
-function parsePRData(data: any, useLines: boolean) {
+function parsePRData(data: any, useLines: boolean): File[] {
   const headerRegex = /@@\s-\d+,\d+\s\+(?<start>\d+),(?<extent>\d+)\s@@/g
   return data
-    .filter(({ filename }) => filename.match(/\.tsx?$/))
+    .filter(
+      ({ filename, status }) =>
+        filename.match(/\.tsx?$/) &&
+        ['added', 'modified', 'renamed'].includes(status)
+    )
     .map((change: { filename: string; patch?: string }) => {
       const fileName = change.filename
       let lines = undefined
