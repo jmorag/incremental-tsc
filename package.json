@@ -16,7 +16,8 @@
   },
   "type": "module",
   "scripts": {
-    "npm": "tsc --build tsconfig.json && chmod +x ./index.js && yarn publish"
+    "build": "node_modules/.bin/tsc --build tsconfig.json",
+    "npm": "yarn build && chmod +x ./index.js && yarn publish"
   },
   "devDependencies": {
     "@types/chalk": "^2.2.0",

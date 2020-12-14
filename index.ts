@@ -5,8 +5,10 @@ import yargs from 'yargs'
 import fetch from 'node-fetch'
 import { URL } from 'url'
 import chalk from 'chalk'
+import { execFileSync } from 'child_process'
 
 // This represents the + section of the @@ header of a patch
+const patchHeaderRegex = /@@\s-\d+,\d+\s\+(?<start>\d+),(?<extent>\d+)\s@@/g
 interface File {
   fileName: string
   lines?: { start: number; extent: number }[]
@@ -75,7 +77,21 @@ async function parseArgs(args: string[], useLines: boolean): Promise<File[]> {
     const github_pr_url = new URL(args[0])
     return getPRFiles(github_pr_url, useLines)
   } catch (_) {
-    return args.map((arg) => ({ fileName: arg }))
+    return args.map((arg) => {
+      let lines = undefined
+      if (useLines) {
+        lines = []
+        const diffOutput: string = execFileSync(
+          'git',
+          ['diff', '--staged', '--color=never', arg],
+          { encoding: 'utf8' }
+        )
+        for (const l of diffOutput.matchAll(patchHeaderRegex) || []) {
+          lines.push(l.groups)
+        }
+      }
+      return { fileName: arg, lines }
+    })
   }
 }
 
@@ -94,7 +110,6 @@ async function getPRFiles(url: URL, useLines: boolean): Promise<File[]> {
 }
 
 function parsePRData(data: any, useLines: boolean): File[] {
-  const headerRegex = /@@\s-\d+,\d+\s\+(?<start>\d+),(?<extent>\d+)\s@@/g
   return data
     .filter(
       ({ filename, status }) =>
@@ -106,7 +121,7 @@ function parsePRData(data: any, useLines: boolean): File[] {
       let lines = undefined
       if (useLines) {
         lines = []
-        for (const l of change.patch?.matchAll(headerRegex) || []) {
+        for (const l of change.patch?.matchAll(patchHeaderRegex) || []) {
           lines.push(l.groups)
         }
       }
