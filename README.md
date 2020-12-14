@@ -25,3 +25,15 @@ PR_NUM=${CIRCLE_PULL_REQUEST:${#BASE_URL}}
 URL="https://api.github.com/repos/<owner>/<repo>/pulls/${PR_NUM}/files"
 ./node_modules/.bin/incremental-tsc --changed-lines-only "$URL"
 ```
+
+## Running locally
+After staging a file or hunk but before committing, you can run
+```bash
+incremental-tsc --changed-lines-only [filename(s)]
+```
+to run the typechecker on changed lines. This can be integrated with [lint-staged](https://github.com/okonet/lint-staged#examples) to run before every commit.
+```json
+  {
+    "*.{ts,tsx}": "incremental-tsc --changed-lines-only"
+  }
+```
